@@ -1,2 +1,0 @@
-Kaggle Dataset Link: https://www.kaggle.com/datasets/alexanderfreberg/airbnb-listings-2016-dataset
-Portfolio 1 Link on Tableau: https://public.tableau.com/app/profile/monae.mckinney/viz/Portfolio1_17400783171440/TypeofProperty
