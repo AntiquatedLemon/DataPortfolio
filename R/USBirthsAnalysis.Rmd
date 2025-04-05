@@ -1,0 +1,135 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code.
+
+```{r}
+#knitr::opts_chunk$set(echo = TRUE, results = 'show')
+```
+
+```{r clear environment}
+rm(list = ls())
+```
+
+```{r get dataset}
+library(openintro)
+library(ggplot2)
+births <- openintro::births14
+```
+
+```{r investigating}
+str(births)
+summary(births)
+```
+
+categoricals: mature, premie, lowbirthweight, sex, habit, marital, whitemom interval: weeks ratio: fage, mage, visits, gained, weight,
+
+```{r}
+head(births, 5)
+tail(births, 5)
+```
+
+```{r assessing categoricals}
+table(births$mature) # moms are generally younger
+table(births$premie) # babies are usually full term
+table(births$lowbirthweight) # most are not of low birthweight
+table(births$sex) # sex of the baby is around even
+table(births$habit) # most are nonsmokers
+table(births$marital) # most are married at birth but still, around even
+table(births$whitemom) # most participants are white
+par(mfrow = c(2, 3), mar = c(3,5,3,5)) # layout for graphs: 2 rows & 3 columns
+# finish the graphs here
+
+barplot(table(births$mature),
+  las = 1,                          # Rotate the numbers of the y-axis
+  ylab = "Count",                   # Label the y-axis
+  cex.axis = 0.75,                  # Make the numbers of y-axis smaller font
+  main = "Moms",
+  col = c(rep("gray", 4), "red")    # color the first four gray; the last red
+)
+```
+
+```{r assessing numericals visually}
+#diff(range(births$fage))
+#mean, median, min, max, range, 
+
+par(mfrow = c(2, 3), mar = c(3,5,3,5))
+hist(births$fage,
+  xlab = "Age",
+  main = "Father's Age at Birth"
+)
+hist(births$mage,
+  xlab = "Age",
+  main = "Mother's Age at Birth"
+)
+hist(births$weeks,
+  xlab = "Weeks",
+  main = "Pregnancy in Weeks"
+)
+hist(births$visits,
+  xlab = "Visits",
+  main = "Hospital Visits \nduring Pregnancy"
+)
+hist(births$gained,
+  xlab = "Weight",
+  main = "Weight Gained by Mother \nduring Pregnancy"
+)
+hist(births$weight,
+  xlab = "Weight (lbs)",
+  main = "Baby Weight at Birth"
+)
+par(mfrow = c(1,1))
+barplot(table(births$fage),
+        horizontal = TRUE,
+        las = 1, #rotate names on y-axis
+        cex.axis = 0.5, #y-axis font size smaller
+        cex.lab = 0.75,  #variable names smaller
+        xlab = 'Father\`s Age',
+        )
+```
+
+is it possible to remove all rows with NAs and if so, by how much does that reduce my dataset fun little side project could be augmentation of the dataset through R
+
+-   to either fill the NA gaps (some process of interpolation, extrapolation)
+
+-   double or even triple the dataset by some specific type of sampling (e.g. stratifying that can balance the observations a bit)
+
+```{r}
+sum(is.na(births))
+var()
+sd()
+```
+
+```{r}
+boxplot(age ~ gender, data = donors)
+```
+
+```{r}
+hist(donors$totalGivingAmount,
+  xlab = "Total $ Given",
+  main = "Right skewed histogram"
+)
+
+stripchart(donors1_20$age, # identify my variable of interest
+  method = "stack",        # stack identical giving amounts
+  xlab = "Age",            # label the x-axis
+  ylim = c(0, 10),         # put the dots closer to the axis
+  pch = 16,                # use dots for each donor
+  cex = 2                  # make the dots a smaller size
+)
+
+barplot(table(donors$urbanicity),
+  las = 1,                          # Rotate the numbers of the y-axis
+  ylab = "Count",                   # Label the y-axis
+  cex.axis = 0.75,                  # Make the numbers of y-axis smaller font
+  main = "How do we increase the number of urban donors?",
+  col = c(rep("gray", 4), "red")    # color the first four gray; the last red
+) 
+```
+
+```{r}
+# based on full 1000
+sampleBirths <- sample(births, 100, replace = FALSE)
+```
