@@ -1,35 +1,73 @@
 ---
-title: "R Notebook"
+title: "2014 US Births Analysis"
 output: html_notebook
 ---
 
-This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code.
-
 ```{r}
-#knitr::opts_chunk$set(echo = TRUE, results = 'show')
+knitr::opts_chunk$set(echo = TRUE, results = 'show')
 ```
 
-```{r clear environment}
+## Housekeeping Tasks
+
+```{r housekeeping}
+# clear environment
 rm(list = ls())
+
+# packages
+myPackages <- c("openintro", "ggplot2", "patchwork", "ggthemes", "dplyr", "psych")
+
+# get packages if necessary
+#install.packages(myPackages)
+
+# load packages
+lapply(myPackages, require, character.only=TRUE)
+
+# not necessary, I just don't care for the warnings
+options(warn = -1)
 ```
 
 ```{r get dataset}
-library(openintro)
-library(ggplot2)
 births <- openintro::births14
 ```
 
+## Describing & Observing
+
 ```{r investigating}
-str(births)
-summary(births)
+# find the describe function to be very useful, preferred visually
+describe(births)
+
+# since it doesnt make NAs clear though:
+sum(is.na((births))) # know I have 231 missing values
+births[!complete.cases(births), ] # returns 206 rows, so at least 2 missing values
+missingValues <- as.data.frame(colSums(is.na(births)))
+missingValues %>%
+  filter(`colSums(is.na(births))` > 0)
 ```
 
-categoricals: mature, premie, lowbirthweight, sex, habit, marital, whitemom interval: weeks ratio: fage, mage, visits, gained, weight,
+### Encoding of Variables
+
+-   categorical: mature, premie, lowbirthweight, sex, habit, marital, whitemom
+
+-   interval: weeks
+
+-   ratio: fage, mage, visits, gained, weight
+
+### Missing Values Observations:
+
+-   Father's age accounts for \~49% of our missing data
+
+-   Visits to the hospital account for \~24%
+
+-   Weight Gained by the mother is \~18%
+
+-   Smoking Habit covers \~8%
 
 ```{r}
 head(births, 5)
 tail(births, 5)
 ```
+
+### Bar Plots for Categorical Data
 
 ```{r assessing categoricals}
 table(births$mature) # moms are generally younger
@@ -39,97 +77,201 @@ table(births$sex) # sex of the baby is around even
 table(births$habit) # most are nonsmokers
 table(births$marital) # most are married at birth but still, around even
 table(births$whitemom) # most participants are white
-par(mfrow = c(2, 3), mar = c(3,5,3,5)) # layout for graphs: 2 rows & 3 columns
-# finish the graphs here
 
-barplot(table(births$mature),
-  las = 1,                          # Rotate the numbers of the y-axis
-  ylab = "Count",                   # Label the y-axis
-  cex.axis = 0.75,                  # Make the numbers of y-axis smaller font
-  main = "Moms",
-  col = c(rep("gray", 4), "red")    # color the first four gray; the last red
-)
+# graphing with ggplot
+graphMature <- ggplot(births, aes(mature)) + geom_bar(stat = "count") + geom_text(stat = "count", aes(label = ..count..), vjust = 1, size = 2.75)
+graphPremie <- ggplot(births, aes(premie)) + geom_bar(stat = "count") + geom_text(stat = "count", aes(label = ..count..), vjust = 1, size = 2.75)
+graphLowBW <- ggplot(births, aes(lowbirthweight)) + geom_bar(stat = "count") + geom_text(stat = "count", aes(label = ..count..), vjust = 0.8, size = 2.75)
+graphSex <- ggplot(births, aes(sex)) + geom_bar(stat = "count")  + geom_text(stat = "count", aes(label = ..count..), vjust = 1, size = 2.75)
+graphHabit <- ggplot(births, aes(habit)) + geom_bar(stat = "count") + geom_text(stat = "count", aes(label = ..count..), vjust = 1, size = 2.75)
+graphMarital <- ggplot(births, aes(marital)) + geom_bar(stat = "count")  + geom_text(stat = "count", aes(label = ..count..), vjust = 1, size = 2.75)
+graphWhite <- ggplot(births, aes(whitemom)) + geom_bar(stat = "count") + geom_text(stat = "count", aes(label = ..count..), vjust = 1, size = 2.75)
+
+graphMature + graphPremie + graphLowBW + graphSex + graphHabit + graphMarital + graphWhite + plot_layout(ncol = 3) & theme_pander()
 ```
 
-```{r assessing numericals visually}
-#diff(range(births$fage))
-#mean, median, min, max, range, 
+Notes: Not too much interesting in these graphs
 
+Potential Later Inquiries: perhaps might find something in further segmentation like by low birth weight by child sex, mother maturity, mother race, marital status
+
+### Histograms for Numerical Data
+
+```{r assessing numericals visually}
 par(mfrow = c(2, 3), mar = c(3,5,3,5))
 hist(births$fage,
   xlab = "Age",
-  main = "Father's Age at Birth"
+  main = "Father's Age at Birth",
+  col = "deepskyblue2"
 )
 hist(births$mage,
   xlab = "Age",
-  main = "Mother's Age at Birth"
+  main = "Mother's Age at Birth",
+  col = "forestgreen"
 )
 hist(births$weeks,
   xlab = "Weeks",
-  main = "Pregnancy in Weeks"
+  main = "Pregnancy in Weeks",
+  col = "coral"
 )
 hist(births$visits,
   xlab = "Visits",
-  main = "Hospital Visits \nduring Pregnancy"
+  main = "Hospital Visits \nduring Pregnancy",
+  col = "darkgoldenrod"
 )
 hist(births$gained,
-  xlab = "Weight",
-  main = "Weight Gained by Mother \nduring Pregnancy"
+  xlab = "Weight (lbs)",
+  main = "Weight Gained by Mother \nduring Pregnancy",
+  col = "aquamarine"
 )
 hist(births$weight,
   xlab = "Weight (lbs)",
-  main = "Baby Weight at Birth"
+  main = "Baby Weight at Birth",
+  col = "cadetblue"
 )
-par(mfrow = c(1,1))
-barplot(table(births$fage),
-        horizontal = TRUE,
-        las = 1, #rotate names on y-axis
-        cex.axis = 0.5, #y-axis font size smaller
-        cex.lab = 0.75,  #variable names smaller
-        xlab = 'Father\`s Age',
-        )
-```
-
-is it possible to remove all rows with NAs and if so, by how much does that reduce my dataset fun little side project could be augmentation of the dataset through R
-
--   to either fill the NA gaps (some process of interpolation, extrapolation)
-
--   double or even triple the dataset by some specific type of sampling (e.g. stratifying that can balance the observations a bit)
-
-```{r}
-sum(is.na(births))
-var()
-sd()
-```
-
-```{r}
-boxplot(age ~ gender, data = donors)
-```
-
-```{r}
-hist(donors$totalGivingAmount,
-  xlab = "Total $ Given",
-  main = "Right skewed histogram"
+par(mfrow = c(4, 2), mar = c(3,5,3,5))
+boxplot(births$fage,
+  xlab = "Age",
+  horizontal = TRUE,
+  pch = 16,
+  col = "deepskyblue2", 
+  main = "Father's Age at Birth"
 )
-
-stripchart(donors1_20$age, # identify my variable of interest
-  method = "stack",        # stack identical giving amounts
-  xlab = "Age",            # label the x-axis
-  ylim = c(0, 10),         # put the dots closer to the axis
-  pch = 16,                # use dots for each donor
-  cex = 2                  # make the dots a smaller size
-)
-
-barplot(table(donors$urbanicity),
-  las = 1,                          # Rotate the numbers of the y-axis
-  ylab = "Count",                   # Label the y-axis
-  cex.axis = 0.75,                  # Make the numbers of y-axis smaller font
-  main = "How do we increase the number of urban donors?",
-  col = c(rep("gray", 4), "red")    # color the first four gray; the last red
+boxplot(births$mage,
+  xlab = "Age",
+  horizontal = TRUE,
+  pch = 16,
+  col = "forestgreen", 
+  main = "Mother's Age at Birth" # informative title
 ) 
+boxplot(births$weeks,
+  xlab = "Weeks",
+  horizontal = TRUE,
+  pch = 16,
+  col = "coral", 
+  main = "Pregnancy in Weeks" # informative title
+) 
+boxplot(births$visits,
+  xlab = "Visits",
+  horizontal = TRUE,
+  pch = 16,
+  col = "darkgoldenrod", 
+  main = "Hospital Visits \nduring Pregnancy" # informative title
+) 
+boxplot(births$gained,
+  xlab = "Weight (lbs)",
+  horizontal = TRUE,
+  pch = 16,
+  col = "aquamarine", 
+  main = "Weight Gained by Mother \nduring Pregnancy" # informative title
+) 
+boxplot(births$weight,
+  xlab = "Weight (lbs)",
+  horizontal = TRUE,
+  pch = 16,
+  col = "cadetblue", 
+  main = "Baby Weight at Birth" # informative title
+)
+```
+
+Two different ways of expressing similar concepts but I personally feel the boxplots to be a bit more informative in that it makes our outliers clearer in context of the lower/upper ranges of "normal" for the population.
+
+Some observations:
+
+-   Appear to be pretty normally distributed with some small skews
+
+    -   *Pregnancy in Weeks* is skewed to the left
+
+    -   *Weight Gained by Mother during Pregnancy* is skewed to the right.
+
+<!-- -->
+
+-   Fathers tend to be older than mothers
+
+-   If they're an outlier, more likely that the pregnancy will be shorter than longer.
+
+-   Mothers are more likely to gain more weight than "normal" while babies are more likely to have lower weights at birth than "normal"
+
+## Testing
+
+### Random Sampling
+
+```{r random sampling}
+# would strongly prefer to not have to edit my analysis every rerun, thanks
+set.seed(12)
+# only 10% to ensure that things remain cool, independence wise
+sampleBirths <- births[sample(nrow(births), 100, replace = FALSE), ]
+describe(sampleBirths)
+```
+
+## Correlations
+
+```{r}
+pairs(~ fage + mage + weeks + visits, 
+      data = sampleBirths, 
+      na.action = na.omit)
+pairs(~ fage + mage + gained + weight, 
+      data = sampleBirths, 
+      na.action = na.omit)
+pairs(~ mage + weeks + gained + weight, 
+      data = sampleBirths, 
+      na.action = na.omit)
+```
+
+No part of me is surprised by the seemingly tight correlation between mother's age and father's age, that is how that usually goes.
+
+```{r correlation matrix}
+round(cor(sampleBirths[ , c("fage", "mage", "weeks", "visits", "gained", "weight")], use = "complete.obs"), 2)
+```
+
+Correlation matrix confirms what we would have thought about the mother's and father's age at a moderate-to-strong 0.78. And based on the graphs, I didn't fully expect much to come from this in that manner, everything does look pretty scattered. The baby's weight and weeks of pregnancy are the strongest correlation on the board (other than the obvious of correlation with the same variable), which makes sense as they've had a bit more time to bake in the oven.
+
+```{r}
+round(cor(sampleBirths[1:50, c("fage", "mage", "weeks", "visits", "gained", "weight")], use = "complete.obs" ), 2)
+```
+
+The second had nothing to do with anything really, it was just interesting to see how little it takes to change the numbers.
+
+-   While not by much, mother and father's ages are less correlated.
+
+-   Mother's weight gained is now more strongly correlated with the baby's weight gain.
+
+### Linear Regression
+
+May not turn up much but perhaps, looking into the strongest correlation?
+
+effect on weight given weeks
+
+```{r}
+model <- lm(sampleBirths$weight ~ sampleBirths$weeks)
+
+model
 ```
 
 ```{r}
-# based on full 1000
-sampleBirths <- sample(births, 100, replace = FALSE)
+model2 <- lm(sampleBirths$weight ~ sampleBirths$gained)
+model2
 ```
+
+Investigation Points:
+
+-   multiple regression
+
+-   (multiple) logistic regression
+
+```         
+-   visit, gain, weight, sex, marital -\> any of these more likely to produce children who are preemies or having low birth weight
+```
+
+-   see if I can get a [polynomial regression](https://www.statology.org/polynomial-regression-r/) in there somewhere
+
+For my own interest:
+
+-   if I were to remove all rows with NAs, I would be left with 794 observations... which not terrible but no reason to cut into it like that if it isn't necessary
+
+-   However, potential exploration point is since that is \~20% of the available dataset, a fun little side project could be learning to [augment data in R](https://www.r-bloggers.com/2016/10/what-you-need-to-know-about-data-augmentation-for-machine-learning/)
+
+    -   either to fill in NA by some means or another
+
+    -   double, maybe even triple the dataset
+
+        -   perhaps with some kind of stratification (giving me more "smokers" data)
