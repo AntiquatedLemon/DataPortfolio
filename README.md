@@ -5,7 +5,7 @@ Date: April 2025 - Present
 
 Tools: R
 
-Packages: OpenIntro, ggplot2
+Packages: OpenIntro, ggplot2, patchwork, ggthemes, dplyr, psych
 
 The US Births dataset from OpenIntro contains data on births in the United States, including variables such as birth counts, maternal age, and birth month. This analysis aims to uncover trends and patterns in birth rates, identify seasonal variations, and examine the impact of factors like maternal age and month on birth outcomes, providing insights for public health strategies and policy decisions regarding maternal and child health.
 
