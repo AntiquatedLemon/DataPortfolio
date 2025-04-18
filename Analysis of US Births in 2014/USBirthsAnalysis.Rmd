@@ -14,7 +14,7 @@ knitr::opts_chunk$set(echo = TRUE, results = 'show')
 rm(list = ls())
 
 # packages
-myPackages <- c("openintro", "ggplot2", "patchwork", "ggthemes", "dplyr", "psych")
+myPackages <- c("openintro","tidyverse", "patchwork", "ggthemes", "psych")
 
 # get packages if necessary
 #install.packages(myPackages)
@@ -44,6 +44,12 @@ missingValues %>%
   filter(`colSums(is.na(births))` > 0)
 ```
 
+```{r cleaning}
+birthsCleaned <- births %>%
+  drop_na()
+str(birthsCleaned)
+```
+
 ### Encoding of Variables
 
 -   categorical: mature, premie, lowbirthweight, sex, habit, marital, whitemom
@@ -63,29 +69,29 @@ missingValues %>%
 -   Smoking Habit covers \~8%
 
 ```{r}
-head(births, 5)
-tail(births, 5)
+head(birthsCleaned, 5)
+tail(birthsCleaned, 5)
 ```
 
 ### Bar Plots for Categorical Data
 
 ```{r assessing categoricals}
-table(births$mature) # moms are generally younger
-table(births$premie) # babies are usually full term
-table(births$lowbirthweight) # most are not of low birthweight
-table(births$sex) # sex of the baby is around even
-table(births$habit) # most are nonsmokers
-table(births$marital) # most are married at birth but still, around even
-table(births$whitemom) # most participants are white
+table(birthsCleaned$mature) # moms are generally younger
+table(birthsCleaned$premie) # babies are usually full term
+table(birthsCleaned$lowbirthweight) # most are not of low birthweight
+table(birthsCleaned$sex) # sex of the baby is around even
+table(birthsCleaned$habit) # most are nonsmokers
+table(birthsCleaned$marital) # most are married at birth but still, around even
+table(birthsCleaned$whitemom) # most participants are white
 
 # graphing with ggplot
-graphMature <- ggplot(births, aes(mature)) + geom_bar(stat = "count") + geom_text(stat = "count", aes(label = ..count..), vjust = 1, size = 2.75)
-graphPremie <- ggplot(births, aes(premie)) + geom_bar(stat = "count") + geom_text(stat = "count", aes(label = ..count..), vjust = 1, size = 2.75)
-graphLowBW <- ggplot(births, aes(lowbirthweight)) + geom_bar(stat = "count") + geom_text(stat = "count", aes(label = ..count..), vjust = 0.8, size = 2.75)
-graphSex <- ggplot(births, aes(sex)) + geom_bar(stat = "count")  + geom_text(stat = "count", aes(label = ..count..), vjust = 1, size = 2.75)
-graphHabit <- ggplot(births, aes(habit)) + geom_bar(stat = "count") + geom_text(stat = "count", aes(label = ..count..), vjust = 1, size = 2.75)
-graphMarital <- ggplot(births, aes(marital)) + geom_bar(stat = "count")  + geom_text(stat = "count", aes(label = ..count..), vjust = 1, size = 2.75)
-graphWhite <- ggplot(births, aes(whitemom)) + geom_bar(stat = "count") + geom_text(stat = "count", aes(label = ..count..), vjust = 1, size = 2.75)
+graphMature <- ggplot(birthsCleaned, aes(mature)) + geom_bar(stat = "count") + geom_text(stat = "count", aes(label = after_stat(count)), vjust = 1, size = 2.75)
+graphPremie <- ggplot(birthsCleaned, aes(premie)) + geom_bar(stat = "count") + geom_text(stat = "count", aes(label = after_stat(count)), vjust = 1, size = 2.75)
+graphLowBW <- ggplot(birthsCleaned, aes(lowbirthweight)) + geom_bar(stat = "count") + geom_text(stat = "count", aes(label = after_stat(count)), vjust = 0.8, size = 2.75)
+graphSex <- ggplot(birthsCleaned, aes(sex)) + geom_bar(stat = "count")  + geom_text(stat = "count", aes(label = after_stat(count)), vjust = 1, size = 2.75)
+graphHabit <- ggplot(birthsCleaned, aes(habit)) + geom_bar(stat = "count") + geom_text(stat = "count", aes(label = after_stat(count)), vjust = 1, size = 2.75)
+graphMarital <- ggplot(birthsCleaned, aes(marital)) + geom_bar(stat = "count")  + geom_text(stat = "count", aes(label = after_stat(count)), vjust = 1, size = 2.75)
+graphWhite <- ggplot(birthsCleaned, aes(whitemom)) + geom_bar(stat = "count") + geom_text(stat = "count", aes(label = after_stat(count)), vjust = 1, size = 2.75)
 
 graphMature + graphPremie + graphLowBW + graphSex + graphHabit + graphMarital + graphWhite + plot_layout(ncol = 3) & theme_pander()
 ```
