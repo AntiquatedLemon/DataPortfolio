@@ -14,7 +14,7 @@ knitr::opts_chunk$set(echo = TRUE, results = 'show')
 rm(list = ls())
 
 # packages
-myPackages <- c("openintro","tidyverse", "patchwork", "ggthemes", "psych")
+myPackages <- c("openintro","tidyverse", "patchwork", "ggthemes", "psych", "corrplot", "GGally", "car", "MASS")
 
 # get packages if necessary
 #install.packages(myPackages)
@@ -44,12 +44,6 @@ missingValues %>%
   filter(`colSums(is.na(births))` > 0)
 ```
 
-```{r cleaning}
-birthsCleaned <- births %>%
-  drop_na()
-str(birthsCleaned)
-```
-
 ### Encoding of Variables
 
 -   categorical: mature, premie, lowbirthweight, sex, habit, marital, whitemom
@@ -67,6 +61,19 @@ str(birthsCleaned)
 -   Weight Gained by the mother is \~18%
 
 -   Smoking Habit covers \~8%
+
+```{r cleaning}
+# handle factoring
+factoringCols <- c("mature", "premie", "lowbirthweight", "sex", "habit", "marital", "whitemom")
+births[factoringCols] <- lapply(births[factoringCols], factor)
+sapply(births, class)
+
+# cleaning of NAs
+birthsCleaned <- births %>%
+  drop_na()
+
+str(birthsCleaned)
+```
 
 ```{r}
 head(birthsCleaned, 5)
@@ -104,73 +111,73 @@ Potential Later Inquiries: perhaps might find something in further segmentation 
 
 ```{r assessing numericals visually}
 par(mfrow = c(2, 3), mar = c(3,5,3,5))
-hist(births$fage,
+hist(birthsCleaned$fage,
   xlab = "Age",
   main = "Father's Age at Birth",
   col = "deepskyblue2"
 )
-hist(births$mage,
+hist(birthsCleaned$mage,
   xlab = "Age",
   main = "Mother's Age at Birth",
   col = "forestgreen"
 )
-hist(births$weeks,
+hist(birthsCleaned$weeks,
   xlab = "Weeks",
   main = "Pregnancy in Weeks",
   col = "coral"
 )
-hist(births$visits,
+hist(birthsCleaned$visits,
   xlab = "Visits",
   main = "Hospital Visits \nduring Pregnancy",
   col = "darkgoldenrod"
 )
-hist(births$gained,
+hist(birthsCleaned$gained,
   xlab = "Weight (lbs)",
   main = "Weight Gained by Mother \nduring Pregnancy",
   col = "aquamarine"
 )
-hist(births$weight,
+hist(birthsCleaned$weight,
   xlab = "Weight (lbs)",
   main = "Baby Weight at Birth",
   col = "cadetblue"
 )
 par(mfrow = c(4, 2), mar = c(3,5,3,5))
-boxplot(births$fage,
+boxplot(birthsCleaned$fage,
   xlab = "Age",
   horizontal = TRUE,
   pch = 16,
   col = "deepskyblue2", 
   main = "Father's Age at Birth"
 )
-boxplot(births$mage,
+boxplot(birthsCleaned$mage,
   xlab = "Age",
   horizontal = TRUE,
   pch = 16,
   col = "forestgreen", 
   main = "Mother's Age at Birth" # informative title
 ) 
-boxplot(births$weeks,
+boxplot(birthsCleaned$weeks,
   xlab = "Weeks",
   horizontal = TRUE,
   pch = 16,
   col = "coral", 
   main = "Pregnancy in Weeks" # informative title
 ) 
-boxplot(births$visits,
+boxplot(birthsCleaned$visits,
   xlab = "Visits",
   horizontal = TRUE,
   pch = 16,
   col = "darkgoldenrod", 
   main = "Hospital Visits \nduring Pregnancy" # informative title
 ) 
-boxplot(births$gained,
+boxplot(birthsCleaned$gained,
   xlab = "Weight (lbs)",
   horizontal = TRUE,
   pch = 16,
   col = "aquamarine", 
   main = "Weight Gained by Mother \nduring Pregnancy" # informative title
 ) 
-boxplot(births$weight,
+boxplot(birthsCleaned$weight,
   xlab = "Weight (lbs)",
   horizontal = TRUE,
   pch = 16,
@@ -189,7 +196,7 @@ Some observations:
 
     -   *Weight Gained by Mother during Pregnancy* is skewed to the right.
 
-<!-- -->
+    -   Either way, that means correlations later can be on default of Pearson's
 
 -   Fathers tend to be older than mothers
 
@@ -203,78 +210,232 @@ Some observations:
 
 ```{r random sampling}
 # would strongly prefer to not have to edit my analysis every rerun, thanks
-set.seed(12)
-# only 10% to ensure that things remain cool, independence wise
-sampleBirths <- births[sample(nrow(births), 100, replace = FALSE), ]
+set.seed(42)
+# only ~10% to ensure that things remain cool, independence wise
+sampleBirths <- birthsCleaned[sample(nrow(birthsCleaned), 79, replace = FALSE), ]
 describe(sampleBirths)
 ```
 
 ## Correlations
 
-```{r}
-pairs(~ fage + mage + weeks + visits, 
-      data = sampleBirths, 
-      na.action = na.omit)
-pairs(~ fage + mage + gained + weight, 
-      data = sampleBirths, 
-      na.action = na.omit)
-pairs(~ mage + weeks + gained + weight, 
-      data = sampleBirths, 
-      na.action = na.omit)
+```{r correlation matrix}
+# take only columns that are numeric, make correlation matrix, round each value to 3 decimal places
+corMatrix <- round(cor(sampleBirths[,sapply(sampleBirths,is.numeric)]), 3)
+corMatrix
 ```
 
 No part of me is surprised by the seemingly tight correlation between mother's age and father's age, that is how that usually goes.
 
-```{r correlation matrix}
-round(cor(sampleBirths[ , c("fage", "mage", "weeks", "visits", "gained", "weight")], use = "complete.obs"), 2)
-```
+Correlation matrix confirms what we would have thought about the mother's and father's age at a moderate-to-strong 0.77. And based on the graphs, I didn't fully expect much to come from this in that manner, everything does look pretty scattered. The baby's weight and weeks of pregnancy are the strongest correlation on the board (other than the obvious of correlation with the same variable), which makes sense as they've had a bit more time to bake in the oven.
 
-Correlation matrix confirms what we would have thought about the mother's and father's age at a moderate-to-strong 0.78. And based on the graphs, I didn't fully expect much to come from this in that manner, everything does look pretty scattered. The baby's weight and weeks of pregnancy are the strongest correlation on the board (other than the obvious of correlation with the same variable), which makes sense as they've had a bit more time to bake in the oven.
+Focusing in on the birth weight and the gestation period, we can look at something like that by smoker status or maternal race.
 
 ```{r}
-round(cor(sampleBirths[1:50, c("fage", "mage", "weeks", "visits", "gained", "weight")], use = "complete.obs" ), 2)
-```
-
-The second had nothing to do with anything really, it was just interesting to see how little it takes to change the numbers.
-
--   While not by much, mother and father's ages are less correlated.
-
--   Mother's weight gained is now more strongly correlated with the baby's weight gain.
-
-### Linear Regression
-
-May not turn up much but perhaps, looking into the strongest correlation?
-
-effect on weight given weeks
-
-```{r}
-model <- lm(sampleBirths$weight ~ sampleBirths$weeks)
-
-model
+ggplot(sampleBirths, aes(x = weeks, y = weight, color = habit)) +
+  geom_point(alpha = 0.6) +
+  geom_smooth(method = "lm", se = FALSE) +
+  theme_pander() +
+  labs(title = "Birth Weight vs. Gestation by Smoking Status", 
+       x = "Gestation (weeks)", 
+       y = "Weight (lbs)")
+ggplot(sampleBirths, aes(x = weeks, y = weight, color = whitemom)) +
+  geom_point(alpha = 0.6) +
+  geom_smooth(method = "lm", se = FALSE) +
+  theme_pander() +
+  labs(title = "Birth Weight vs. Gestation by Maternal Race", 
+       x = "Gestation (weeks)", 
+       y = "Weight (lbs)")
 ```
 
 ```{r}
-model2 <- lm(sampleBirths$weight ~ sampleBirths$gained)
-model2
+round(cor(sampleBirths[1:50,sapply(sampleBirths,is.numeric)]), 2)
 ```
 
-Investigation Points:
+The second had nothing to do with anything really, it was just interesting to see how little it takes to change the numbers. While not by much, mother and father's ages are more correlated; also the mother's weight gained is now more strongly correlated with the baby's birth weight.
 
--   multiple regression
+#### Visualize the correlation matrix
 
--   (multiple) logistic regression
-
-```         
--   visit, gain, weight, sex, marital -\> any of these more likely to produce children who are preemies or having low birth weight
+```{r}
+corrplot(corMatrix, method = 'color', type = "lower", addCoef.col = 'black', tl.col = 'black', number.cex = 0.8)
 ```
 
--   see if I can get a [polynomial regression](https://www.statology.org/polynomial-regression-r/) in there somewhere
+```{r}
+ggpairs(sampleBirths[,sapply(sampleBirths,is.numeric)],
+        upper = list(continuous = 'cor'),
+        title = "Pairwise Scatterplots with Correlations")
+```
+
+By the graph's determination, mage/fage, weight/weeks, mother's weight gained and baby's weight at birth were most correlated
+
+`gained` and `weight` (does more maternal weight gain mean heavier babies?)
+
+```{r}
+# Scatter plot: gained vs. weight by marital status
+ggplot(sampleBirths, aes(x = gained, y = weight, color = marital)) +
+  geom_point(alpha = 0.6) +
+  geom_smooth(method = "lm", se = FALSE) +
+  theme_pander() +
+  labs(title = "Maternal Weight Gain vs. Baby Weight by Marital Status",
+       x = "Maternal Weight Gain (lbs)",
+       y = "Baby Weight (oz)")
+# by smoker status
+ggplot(sampleBirths, aes(x = gained, y = weight, color = habit)) +
+  geom_point(alpha = 0.6) +
+  geom_smooth(method = "lm", se = FALSE) +
+  theme_pander() +
+  labs(title = "Maternal Weight Gain vs. Baby Weight by Smoking Habit",
+       x = "Maternal Weight Gain (lbs)",
+       y = "Baby Weight (oz)")
+# by maternal race
+ggplot(sampleBirths, aes(x = gained, y = weight, color = whitemom)) +
+  geom_point(alpha = 0.6) +
+  geom_smooth(method = "lm", se = FALSE) +
+  theme_pander() +
+  labs(title = "Maternal Weight Gain vs. Baby Weight by Maternal Race", 
+       x = "Maternal Weight Gain (lbs)",
+       y = "Baby Weight (oz)")
+```
+
+-   Appears to be no relationship between baby's weight at birth and mother's weight when the mother is married but a weak relationship between the two when the mother is married.
+
+-   As it relates to smoking, there does seem to be a relationship but it is far weaker for nonsmokers than smokers.
+
+-   The same is true for race, weak for not white moms but slightly stronger for white moms.
+
+## Regressions
+
+### Simple Linear
+
+Going to look at the effects on the baby's birth weight using a linear regression model. I will place more in the model but I was more interested in the weight and weeks connection. Also interested in the visits.
+
+```{r}
+modelWeeks <- lm(weight ~ weeks, data = sampleBirths)
+summary(modelWeeks)
+plot(modelWeeks)
+```
+
+We predict that baby's birth weight to increase by 0.21 for each week spent gestating. This makes sense as if the baby stays in for longer, they have more time to grow. However, the intercept would need some adjustment to make sense of as currently all it means is "when weeks is zero, we predict the baby's birth weight to be -0.92 lbs", which... at zero weeks, the baby has no birth weight and a birth at this point would be referred to as a completely different medical event.
+
+The residuals indicates the model underpredicts by 1.06lbs and the r-squared value indicates that weeks only explains as little as 18.69% of the variation in the model.
+
+```{r}
+modelVisits <- lm(weight ~ visits, data = sampleBirths)
+summary(modelVisits)
+```
+
+This predictor turned out to be insignificant on its own but if it were, we'd predict that baby's birth weight to decrease by 0.05 lbs for each visit during pregnancy. At zero visits, we predict that the baby's weight would be 7.88 lbs, which is a pretty good thing as that is around the mean and is within weight for full term babies!
+
+Again, the residuals indicates the model underpredicts by 1.16 lbs and the r-squared value indicates that visits explains far less variation than weeks did, at 2.54%.
+
+### Multiple Linear
+
+Let's see if there's anything we can add to weeks to generate a better result.
+
+```{r kitchen sink approach}
+modelMultiple <- lm(weight ~ weeks + gained + mage + fage + visits + mature + premie + lowbirthweight + sex + habit + marital + whitemom, data = sampleBirths)
+summary(modelMultiple)
+plot(modelMultiple)
+```
+
+But first, make sure the assumptions are met if we put everything in
+
+```{r}
+hist(modelMultiple$residuals)
+```
+
+Appears to be normally distributed for the most part, even if somewhat tailed, which I would think to be fair considering that I did remove all incomplete data from the beginning and I'm not using the full data set currently. Appears to be reasonably linear. Already looked at the correlations and they're so low that I'm not super concerned about multicollinearity; however, with consideration to my analysis focusing on the baby's birth weight, of course I should reasonably expect that the value of low birth weight to correlate with the baby's birth weight and as a result, it is my first removal from the model once we get to that point.
+
+```{r homoscedasticity}
+breushpaganTest <- ncvTest(modelMultiple)
+breushpaganTest
+```
+
+Using the Breush-Pagan test on the basis of my multiple linear regression model, the p-value is greater than 0.05 so we're failing to reject the null hypothesis and assuming then that the variance of the residual errors is similar across each independent variable.
+
+We can continue forward.
+
+Due to the fact that the results of the first were likely skewed, to a degree, by the lowbirthweight variable, this is the new basis for assessment.
+
+```{r}
+modelMultiple2 <- lm(weight ~ weeks + gained + mage + fage + visits + mature + premie + sex + habit + marital + whitemom, data = sampleBirths)
+summary(modelMultiple2)
+```
+
+The first model's summary indicated that we should remove: weeks, whitemom, habitsmoker, fage, gained and more but we're starting with those.
+
+```{r}
+modelMultiple3 <- lm(weight ~ mage + visits + mature + premie + sex + marital, data = sampleBirths)
+summary(modelMultiple3)
+```
+
+This is good, the residual has decreased and the adjusted r-squared value has increased which means that it's likely a better fit than before.
+
+```{r}
+modelMultiple4 <- lm(weight ~ premie + sex, data = sampleBirths)
+summary(modelMultiple4)
+```
+
+Cutting down to only premie and sex actually increases our residual and decreases the r-squared value so there was a loss somewhere. However, adding anything back short of that .95 and .32 doesn't bring us lower/higher so that might be the most optimal.
+
+```{r}
+anova(modelMultiple3, modelMultiple4)
+```
+
+Considering the ANOVA result, the p is larger than 0.05 so we fail to reject the null and assume then that the first model is better than the second.
+
+Out of curiosity, I just wanted to know if there was some interactions that could account for it and yes! That did lower the residuals and increase the r-squared value.
+
+```{r}
+modelMultiple5 <- lm(weight ~ mage * visits * sex + mature + premie + marital, data = sampleBirths)
+summary(modelMultiple5)
+```
+
+```{r}
+modelInteractAll <- lm(weight ~ weeks + gained + mage + fage + visits + mature + premie + sex + habit + marital + whitemom, data = sampleBirths)
+finalStepAIC <- stepAIC(modelInteractAll, scope = . ~ .^11, direction = "both", trace = 0)
+summary(finalStepAIC)
+```
+
+Super decreased residual and increased r-squared, so pretty good
+
+### Logistic
+
+```{r}
+# note: no weight since that would likely introduce multicollinearity
+logModel <- glm(lowbirthweight ~ visits + gained + sex + marital + weeks + habit + mage, data = sampleBirths, family = "binomial")
+summary(logModel)
+```
+
+```{r}
+# note: no weeks since that would likely introduce multicollinearity
+logModel2 <- glm(premie ~ visits + gained + weight + sex + marital + habit + mage, data = sampleBirths, family = "binomial")
+summary(logModel2)
+```
+
+## Conclusions:
+
+(expected)
+
+-   **Smoking Status**: smoker makes for lower birth weights
+
+```{=html}
+<!-- -->
+```
+-   **Gestation Period**: longer gestation makes for higher birth weight
+
+```{=html}
+<!-- -->
+```
+-   **Weight Gain**: Mothers who gained more weight make for higher birth weights.
+
+```{=html}
+<!-- -->
+```
+-   **Parental Age**: mage/fage association to birth weight, variable effects??
 
 For my own interest:
 
--   if I were to remove all rows with NAs, I would be left with 794 observations... which not terrible but no reason to cut into it like that if it isn't necessary
-
--   However, potential exploration point is since that is \~20% of the available dataset, a fun little side project could be learning to [augment data in R](https://www.r-bloggers.com/2016/10/what-you-need-to-know-about-data-augmentation-for-machine-learning/)
+-   since I did cut down to only 794 observations, a fun little side project could be learning to [augment data in R](https://www.r-bloggers.com/2016/10/what-you-need-to-know-about-data-augmentation-for-machine-learning/)
 
     -   either to fill in NA by some means or another
 
