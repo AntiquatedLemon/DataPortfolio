@@ -7,7 +7,7 @@ Tools: Python
 
 Packages: streamlit, pandas, numpy, matplotlib, seaborn, sklearn
 
-This web application is an intuitive and responsive platform designed to explore and visualize data interactively. It offers users the ability to upload a dataset as a CSV file and automatically receive summary statistics, information regarding the data and generate dynamic visualizations within a user-friendly interface. This allows the the user to obtain quick insights and focus on instant analysis instead of special software or programming.
+This web application is an intuitive and responsive platform designed to explore and visualize data interactively. It offers users the ability to upload a dataset as a CSV file and automatically receive summary statistics, information regarding the data and generate dynamic visualizations within a user-friendly interface. This allows the user to obtain quick insights and focus on instant analysis instead of special software or programming.
 
 ***
 ### Analysis of US Births in 2014
