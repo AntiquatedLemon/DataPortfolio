@@ -30,7 +30,7 @@ options(warn = -1)
 births <- openintro::births14
 ```
 
-## Describing & Observing
+## Exploratory Data Analysis
 
 ```{r investigating}
 # find the describe function to be very useful, preferred visually
@@ -304,6 +304,11 @@ ggplot(sampleBirths, aes(x = gained, y = weight, color = whitemom)) +
 
 ## Regressions
 
+```{r level checks}
+levels(sampleBirths$lowbirthweight)
+
+```
+
 ### Simple Linear
 
 Going to look at the effects on the baby's birth weight using a linear regression model. I will place more in the model but I was more interested in the weight and weeks connection. Also interested in the visits.
@@ -314,24 +319,35 @@ summary(modelWeeks)
 plot(modelWeeks)
 ```
 
-We predict that baby's birth weight to increase by 0.21 for each week spent gestating. This makes sense as if the baby stays in for longer, they have more time to grow. However, the intercept would need some adjustment to make sense of as currently all it means is "when weeks is zero, we predict the baby's birth weight to be -0.92 lbs", which... at zero weeks, the baby has no birth weight and a birth at this point would be referred to as a completely different medical event.
+Intercept: when weeks is zero, we predict the baby's birth weight to be -0.92 lbs. Considering that birth at zero weeks *should* mean that the baby has no birth weight, and that birth at this time would be categorized as a completely different medical event, but is *negative* makes the output not biologically meaningful. It is also not statistically significant.
 
-The residuals indicates the model underpredicts by 1.06lbs and the r-squared value indicates that weeks only explains as little as 18.69% of the variation in the model.
+Weeks: We predict that baby's birth weight to, on average, increase by 0.21 for each week spent gestating. This makes sense as if the baby stays in for longer, they have more time to grow. This is also indicated to be statistically significant.
+
+R\^2: This value indicates that weeks explains as much as 19% of the variation.
+
+F-statistic: It is statistically significant overall so gestational length is a meaningful predictor of birth weight.
+
+Residuals: The prediction is usually around 1lb either direction.
 
 ```{r}
 modelVisits <- lm(weight ~ visits, data = sampleBirths)
 summary(modelVisits)
 ```
 
-This predictor turned out to be insignificant on its own but if it were, we'd predict that baby's birth weight to decrease by 0.05 lbs for each visit during pregnancy. At zero visits, we predict that the baby's weight would be 7.88 lbs, which is a pretty good thing as that is around the mean and is within weight for full term babies!
+The intercept is significant but not all that important to the interpretation as the number of visits isn't normally in this social context but it is possible.
 
-Again, the residuals indicates the model underpredicts by 1.16 lbs and the r-squared value indicates that visits explains far less variation than weeks did, at 2.54%.
+This predictor turned out to be insignificant on its own but if it were, we'd predict that baby's birth weight to decrease by 0.05 lbs for each visit during pregnancy. Additionally it only accounts for 2.5% of the variation in birth weight which is very weak power.
+
+At zero visits, we predict that the baby's weight would be 7.88 lbs, which is a pretty good thing as that is around the mean and is within weight for full term babies! Nonetheless, while plausible, it isn't an indication of being causal.
+
+The residuals here, in context, indicates the error is 1.16 lbs, which is large compared to an effect size of 0.056 lbs per visit, and may explain the lack of statistical significance.
 
 ### Multiple Linear
 
 Let's see if there's anything we can add to weeks to generate a better result.
 
-```{r kitchen sink approach}
+```{r}
+# put everything in
 modelMultiple <- lm(weight ~ weeks + gained + mage + fage + visits + mature + premie + lowbirthweight + sex + habit + marital + whitemom, data = sampleBirths)
 summary(modelMultiple)
 plot(modelMultiple)
@@ -345,7 +361,8 @@ hist(modelMultiple$residuals)
 
 Appears to be normally distributed for the most part, even if somewhat tailed, which I would think to be fair considering that I did remove all incomplete data from the beginning and I'm not using the full data set currently. Appears to be reasonably linear. Already looked at the correlations and they're so low that I'm not super concerned about multicollinearity; however, with consideration to my analysis focusing on the baby's birth weight, of course I should reasonably expect that the value of low birth weight to correlate with the baby's birth weight and as a result, it is my first removal from the model once we get to that point.
 
-```{r homoscedasticity}
+```{r}
+# check for homoscedasticity
 breushpaganTest <- ncvTest(modelMultiple)
 breushpaganTest
 ```
@@ -361,6 +378,18 @@ modelMultiple2 <- lm(weight ~ weeks + gained + mage + fage + visits + mature + p
 summary(modelMultiple2)
 ```
 
+Intercept: yes.
+
+Weeks: Essentially no effect on birth weight when combined with other predictors.
+
+Without significant effect: maternal weight gain; maternal age, despite being slightly negative association; paternal age; younger mothers, despite weighing slightly less; smoking, marital status of the mother, race of the mother
+
+Premie: \~1.96 lbs less and is highly significant
+
+Sex of the infant: Males weight \~0.6 lbs more than females and is significant
+
+This model explains \~38% of the variation in birth weight but adjusted for the number of predictors, it drops to \~28%. While still statistically significant, it indicates that there are other factors not included explain a larger portion of the infant weight variance.
+
 The first model's summary indicated that we should remove: weeks, whitemom, habitsmoker, fage, gained and more but we're starting with those.
 
 ```{r}
@@ -368,49 +397,286 @@ modelMultiple3 <- lm(weight ~ mage + visits + mature + premie + sex + marital, d
 summary(modelMultiple3)
 ```
 
-This is good, the residual has decreased and the adjusted r-squared value has increased which means that it's likely a better fit than before.
+This is good, the residual has decreased and the adjusted r-squared value has increased to \~32%, which means that it's likely a better fit than before. It still does not explain more of the model, of course.
+
+To confirm further reduction, it is limited to premie and sex.
 
 ```{r}
 modelMultiple4 <- lm(weight ~ premie + sex, data = sampleBirths)
 summary(modelMultiple4)
 ```
 
-Cutting down to only premie and sex actually increases our residual and decreases the r-squared value so there was a loss somewhere. However, adding anything back short of that .95 and .32 doesn't bring us lower/higher so that might be the most optimal.
+We can expect that the model is still highly significant but our r-squared values decreased and out residual increased so there may be a loss somewhere. However, it's so small that it's not likely the case there is a loss. In fact, if one were to add anything back to the model, we do not see a meaningful change so we are at a simplified model that represents the primary drivers.
 
 ```{r}
 anova(modelMultiple3, modelMultiple4)
 ```
 
-Considering the ANOVA result, the p is larger than 0.05 so we fail to reject the null and assume then that the first model is better than the second.
+Model 2 (coded as modelMultiple4), is nested within Model 1 (modelMultiple3) because it has fewer predictors.
 
-Out of curiosity, I just wanted to know if there was some interactions that could account for it and yes! That did lower the residuals and increase the r-squared value.
+We're using an ANOVA test to determine whether the additional predictors in Model 1 explains significantly more variance than Model 2. With this output, we can safely fail to reject the null and the additional predictors do not provide a significant improvement of fit.
+
+Out of curiosity, I just wanted to know if there was some interactions that could account for it and yes! That did lower the residuals and increase the r-squared value. A grand majority are not significant individually though.
 
 ```{r}
 modelMultiple5 <- lm(weight ~ mage * visits * sex + mature + premie + marital, data = sampleBirths)
 summary(modelMultiple5)
 ```
 
+Regardless, there is a faster way to answer this question so, pulling out the MASS library for a step AIC.
+
 ```{r}
-modelInteractAll <- lm(weight ~ weeks + gained + mage + fage + visits + mature + premie + sex + habit + marital + whitemom, data = sampleBirths)
-finalStepAIC <- stepAIC(modelInteractAll, scope = . ~ .^11, direction = "both", trace = 0)
-summary(finalStepAIC)
+modelStepAll <- lm(weight ~ weeks + gained + mage + fage + visits + mature + premie + sex + habit + marital + whitemom, data = sampleBirths)
+modelStepAIC <- stepAIC(modelStepAll, scope = . ~ .^11, direction = "both", trace = 0)
+summary(modelStepAIC)
 ```
 
-Super decreased residual and increased r-squared, so pretty good
+Super decreased residual (down to 0.669 lbs) and increased r-squared (up to 77% and 67% for adjusted), so pretty good. We would expect to predict the birth weight more precisely by using some interactions and is significant overall.
+
+Of the interactions that are significant are:
+
+-   fage:habitsmoker = 0.366; For babies born to smoking mothers, older fathers are associated with slightly lower birth weight, whereas for babies of non-smoking mothers, older fathers are associated with slightly higher birth weight.
+
+-   visits:whitemomwhite = 0.2586; For babies of White mothers, more prenatal visits are associated with slightly higher birth weight, whereas for babies of non-White mothers, additional visits have a smaller effect.
+
+-   fage:premiepremie = -0.1908; For premature babies, older fathers are associated with slightly lower birth weight, whereas for full-term babies, older fathers are associated with slightly higher birth weight.
+
+-   gained:habitsmoker = 0.1387; For babies of smoking mothers, maternal weight gain is associated with a stronger increase in birth weight, whereas for babies of non-smoking mothers, weight gain has a smaller effect.
+
+-   fage:whitemomwhite = -0.0925; For babies of White mothers, older fathers are associated with slightly lower birth weight, whereas for babies of non-White mothers, older fathers are associated with slightly higher birth weight.
+
+-   weeks:mage = -0.0462; For older mothers, each additional week of gestation contributes slightly less to birth weight, whereas for younger mothers, each week contributes slightly more.
+
+-   weeks:matureyounger mom = -0.5385; For babies of younger mothers, each additional week of gestation contributes less to birth weight, whereas for babies of mature mothers, each week contributes more.
+
+-   gained:premiepremie = -0.1028; For premature babies, maternal weight gain contributes slightly less to birth weight, whereas for full-term babies, weight gain contributes more.
+
+-   matureyounger mom:whitemomwhite = 1.4729; For babies of younger White mothers, birth weight is slightly higher than expected from maternal maturity or race alone, whereas for other combinations of maternal age and race, the effect is smaller.
+
+However, because of this increased complexity, it could be harder to understand individual coefficients if one were to only report this version. The simpler version is better for reporting.
 
 ### Logistic
 
+#### Which maternal, paternal, and pregnancy-related factors are associated with the likelihood of a baby being born with low birth weight?
+
 ```{r}
-# note: no weight since that would likely introduce multicollinearity
-logModel <- glm(lowbirthweight ~ visits + gained + sex + marital + weeks + habit + mage, data = sampleBirths, family = "binomial")
-summary(logModel)
+# simple logistic regression
+simpleLog <- glm(lowbirthweight ~ mature, data = sampleBirths, family = "binomial")
+print(summary(simpleLog), show.residuals = T)
+```
+
+For mature mothers, the estimated log-odds of a baby being of low weight is 2.565 so a probability of \~92%. Younger mothers see a slight decrease in the log-odds but this is not significant, being very similar to the mature mothers (\~91%). Naturally, on its own, this predictor is not significant.
+
+```{r}
+logModel <- glm(lowbirthweight ~ visits + gained + sex + marital + habit + mage + fage + mature + weeks, data = sampleBirths, family = "binomial")
+print(summary(logModel), show.residuals = T)
+```
+
+Residual deviance is lower and thus indicates that this model fits better than an intercept-only one. But it does receive a warning indicating that some combinations are perfect predictions, which inflates coefficient magnitudes and SE.
+
+Significant Predictors: weeks but since it is counterintuitive to believe that weeks would be associated with higher log-odds of low birth weight. It contradicts earlier analyses so there's likely some element of multicollinearity or a separation artifact, mentioned by the warning.
+
+Marginally Significant Predictors:
+
+-   visits: more prenatal visits tend to reduce the odds of low birth wight/
+
+-   habitsmoker: smoking mothers has a large negative coefficient; best to assume that this is related to the quasi-complete separation.
+
+-   fage: older fathers associated with slightly lower odds of low birthweight
+
+-   mature younger mom: younger has a huge negative coefficient, likely separation
+
+Others are not significant in effect but the SE are inflated.
+
+The options that could be causing this multicollinearity or quasi-complete separation. There is an indication that multicollinearity is a concern (large coefficients, inflated SE and warning) when dealing with more than two variables at once but with consideration to the actual warning conferred, we're going to make a note of the potential for multicollinearity and progress with a Firth's Logistic Regression.
+
+```{r multicollinearity}
+vif(logModel)
+```
+
+```{r firths package}
+install.packages("logistf")
+library(logistf)
 ```
 
 ```{r}
-# note: no weeks since that would likely introduce multicollinearity
-logModel2 <- glm(premie ~ visits + gained + weight + sex + marital + habit + mage, data = sampleBirths, family = "binomial")
-summary(logModel2)
+firthModel <- logistf(formula = lowbirthweight ~ visits + gained + sex + marital + 
+    habit + mage + fage + mature + weeks, family = "binomial", 
+    data = sampleBirths
+)
+summary(firthModel)
 ```
+
+Aiming to reduce small sample bias and handle the quasi-complete separation. However, the warning is providing a similar concern in that some combinations still almost perfectly separate the outcomes and has the same side-effects.
+
+We're going to try increasing iterations to 100 to see if that helps.
+
+Update: Even going all the way up to 400 did not get the profile-likelihood CIs to converge for the variables that didn't. This did not help with the warnings so I accept that there are some predictors that are nearly separated in this dataset.
+
+```{r}
+firthModel <- logistf(formula = lowbirthweight ~ visits + gained + sex + marital + 
+    habit + mage + fage + mature + weeks, family = "binomial", 
+    data = sampleBirths,
+    control = logistf.control(maxit = 100)
+)
+summary(firthModel)
+```
+
+Well, fair enough. I have a suspicion about what's causing the problem so before I attempt a step-wise selection, I am going to try that. To further my confirmation, I'm going to let the control go back to the default of 25.
+
+```{r}
+firthModel2 <- logistf(formula = lowbirthweight ~ visits + gained + sex + marital + 
+    habit + mage + fage + mature, family = "binomial", 
+    data = sampleBirths,
+)
+summary(firthModel2)
+```
+
+Aiming to reaffirm with the original model experiencing the problem.
+
+```{r}
+logModel <- glm(lowbirthweight ~ visits + gained + sex + marital + habit + mage + fage + mature, data = sampleBirths, family = "binomial")
+print(summary(logModel), show.residuals = T)
+```
+
+Confirmed. The separation was driven by gestational age, effectively telling us that it has a strong structural relationship to lowbirthweight. It is nearly the perfect separation of outcomes.
+
+It makes sense considering that conceptually, it would make sense for gestational age to be upstream of birth weight and its removal focuses the model on every other available features.
+
+Fortunately that means there's no further need for predictor reduction or regularization.
+
+Again, just to confirm, weeks alone can strongly predict outcome. It is so much so that its inclusion destabilizes models if attending to other associated factors, as it violates the assumption that no predictor comes so close to perfectly predicting the outcome.
+
+```{r}
+weeksOnlyModel <- glm(lowbirthweight ~ weeks, data = sampleBirths, family = "binomial")
+print(summary(weeksOnlyModel), show.residuals = T)
+```
+
+```{r}
+# calculate mcfadden's pseudo r^2
+
+# pull log-likelihood of the null model (null deviance / -2)
+ll.null <- weeksOnlyModel$null.deviance/-2
+
+# pull log-likelihood for the larger model
+ll.proposed <- weeksOnlyModel$deviance/-2
+
+# pseudo
+(ll.null - ll.proposed) / ll.null
+
+# use to get p-value for the R^2 using a chi-square distribution
+1 - pchisq(2*(ll.proposed - ll.null), df = (length(weeksOnlyModel$coefficients)-1))
+```
+
+McFadden's pseudo R\^2 indicates that the model with gestational age explains a substantial proportion of the variation, which is good improvement compared to the null (intercept only) model. The likelihood ratio test's, a chi-square test comparing the null and full model, p-value confirms the significance of improvement of model fit.
+
+Returning to our stable model... sike, this will not perform, we will try again with the logistf version.
+
+```{r}
+# Get odds ratios and 95% CI
+exp_coef <- exp(coef(logModel))
+conf_int <- exp(confint(logModel))
+
+# Combine into a nice table
+logModelResults <- data.frame(
+  Variable = names(exp_coef),
+  OddsRatio = round(exp_coef, 3),
+  CI_Lower = round(conf_int[,1], 3),
+  CI_Upper = round(conf_int[,2], 3)
+)
+
+print(logModelResults)
+```
+
+```{r}
+# Get odds ratios and 95% CI
+exp_coef <- exp(coef(firthModel2))
+conf_int <- exp(confint(firthModel2))
+
+# Combine into a nice table
+firthModel2Results <- data.frame(
+  Variable = names(exp_coef),
+  OddsRatio = round(exp_coef, 3),
+  CI_Lower = round(conf_int[,1], 3),
+  CI_Upper = round(conf_int[,2], 3)
+)
+
+print(firthModel2Results)
+```
+
+While weeks removed the major problem, the failure of the model to converge indicates that a complete or quasi-complete separation is present. Moving to a Firth's penalized logical regression model allows further progression because the coefficient estimates and confidence intervals are more reliable.
+
+Now that diagnostics are done, we can continue. This is what I get for pressing forward despite being exhausted.
+
+```{r}
+# null model
+modelNull = glm(lowbirthweight ~ 1, data = sampleBirths, family = "binomial")
+
+# step model
+step(modelNull, scope = list(upper = firthModel2),
+     direction = "both",
+     )
+
+# Confusion matrix steps
+# predicted probabilities and classes with threshold
+sampleBirths$predictedProb <- predict(firthModel2, type = "response")
+sampleBirths$predictedClass <- ifelse(sampleBirths$predictedProb >= 0.5, 1, 0)
+
+# match length
+length(sampleBirths$predictedClass)
+length(sampleBirths$lowbirthweight)
+
+# confusion matrix
+table(Predicted = sampleBirths$predictedClass,
+      Actual = sampleBirths$lowbirthweight)
+
+```
+
+Adding predictors based on AIC reductions. The additions, in order of greatest impact, are: habit, fage, visits, gained, mature. Smoking has a large negative coefficient, as do the rest but mature.
+
+Babies born to smoking mothers, younger mothers or with lower maternal weight gain have higher likelihoods of being low birth weight. Higher paternal age and more prenatal visits are also associated with slightly increased low birth weight risk in this sample.
+
+#### Which factors predict if the child will be born prematurely?
+
+```{r all together now}
+# null model
+nullModelPremie <- glm(premie ~ 1, data = sampleBirths, family = "binomial")
+
+# full model without weeks and weight
+fullModelPremie <- glm(premie ~ visits + gained + habit + fage + mage + mature + sex + marital, data = sampleBirths, family = "binomial")
+summary(fullModelPremie)
+
+# separation check, firth's - not necessary to based on the the fact that it converges just fine
+firthModelPremie <- logistf(premie ~ visits + gained + habit + fage + mage + mature + sex + marital, data = sampleBirths)
+summary(firthModel)
+
+# stepwise selection, starting with null then stepping up using AIC
+stepModelPremie <- step(nullModelPremie, 
+                  scope = list(upper = fullModelPremie), 
+                  direction = "both")
+summary(stepModelPremie)
+
+# Odds ratios and 95% CI for final model, not using firth's yet
+exp_coefPremie <- exp(coef(stepModelPremie))
+conf_intPremie <- exp(confint(stepModelPremie))
+
+logResultsPremie <- data.frame(
+  Variable = names(exp_coef),
+  OddsRatio = round(exp_coef, 3),
+  CI_Lower = round(conf_int[,1], 3),
+  CI_Upper = round(conf_int[,2], 3)
+)
+
+print(logResultsPremie)
+
+# confusion matrix, class prediction with 0.5 cutoff
+sampleBirths$predictedClassPremie <- ifelse(predict(stepModelPremie, type = "response") > 0.5, 1, 0)
+
+table(Predicted = sampleBirths$predictedClassPremie, Actual = sampleBirths$premie)
+
+```
+
+# finish interpretation
 
 ## Conclusions:
 
@@ -418,19 +684,16 @@ summary(logModel2)
 
 -   **Smoking Status**: smoker makes for lower birth weights
 
-```{=html}
 <!-- -->
-```
+
 -   **Gestation Period**: longer gestation makes for higher birth weight
 
-```{=html}
 <!-- -->
-```
+
 -   **Weight Gain**: Mothers who gained more weight make for higher birth weights.
 
-```{=html}
 <!-- -->
-```
+
 -   **Parental Age**: mage/fage association to birth weight, variable effects??
 
 For my own interest:
