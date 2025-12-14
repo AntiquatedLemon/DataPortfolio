@@ -1,10 +1,11 @@
 ---
 title: "2014 US Births Analysis"
-output: html_notebook
+output:
+  github_document: default
 ---
 
 ```{r}
-knitr::opts_chunk$set(echo = TRUE, results = 'show')
+knitr::opts_chunk$set(echo = TRUE, results = 'show', warning = FALSE, message = FALSE)
 ```
 
 ## Housekeeping Tasks
@@ -14,7 +15,7 @@ knitr::opts_chunk$set(echo = TRUE, results = 'show')
 rm(list = ls())
 
 # packages
-myPackages <- c("openintro","tidyverse", "patchwork", "ggthemes", "psych", "corrplot", "GGally", "car", "MASS")
+myPackages <- c("openintro","tidyverse", "patchwork", "ggthemes", "psych", "corrplot", "GGally", "car", "MASS", "logistf")
 
 # get packages if necessary
 #install.packages(myPackages)
@@ -492,11 +493,6 @@ The options that could be causing this multicollinearity or quasi-complete separ
 
 ```{r multicollinearity}
 vif(logModel)
-```
-
-```{r firths package}
-install.packages("logistf")
-library(logistf)
 ```
 
 ```{r}
